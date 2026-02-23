@@ -8,6 +8,7 @@ export interface Player {
 }
 
 export interface BuzzEvent {
+  playerId: string;
   team: Team;
   playerName: string;
   timestamp: number;

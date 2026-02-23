@@ -121,25 +121,33 @@ export default function HostPage() {
 
           <div className="bg-white rounded-xl shadow-lg p-6">
             <h3 className="text-2xl font-bold mb-4 text-gray-800">Grupos Conectados</h3>
-            <div className="space-y-2">
+            <div className="space-y-3">
               {(['Alpha', 'Bravo', 'Charlie', 'Delta'] as Team[]).map((team) => {
-                const player = session.players.find(p => p.team === team);
-                const isConnected = !!player;
+                const teamPlayers = session.players.filter(p => p.team === team);
+                const isConnected = teamPlayers.length > 0;
                 return (
                   <div
                     key={team}
                     className={`
-                      p-3 rounded-lg flex items-center justify-between
+                      p-3 rounded-lg
                       ${isConnected ? teamColors[team] + ' text-white' : 'bg-gray-200 text-gray-500'}
                     `}
                   >
-                    <div>
-                      <div className="font-bold">{team}</div>
-                      {player && (
-                        <div className="text-sm opacity-90">{player.name}</div>
-                      )}
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="font-bold text-lg">{team}</div>
+                      <span className="text-sm">
+                        {isConnected ? `✓ ${teamPlayers.length} jogador${teamPlayers.length > 1 ? 'es' : ''}` : '○ Aguardando'}
+                      </span>
                     </div>
-                    <span>{isConnected ? '✓ Conectado' : '○ Aguardando'}</span>
+                    {teamPlayers.length > 0 && (
+                      <div className="ml-2 space-y-1">
+                        {teamPlayers.map((player) => (
+                          <div key={player.id} className="text-sm opacity-90">
+                            • {player.name}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -183,7 +191,7 @@ export default function HostPage() {
               </h3>
               {session.buzzRanking.map((buzz, index) => (
                 <div
-                  key={buzz.team}
+                  key={buzz.playerId}
                   className={`
                     ${teamColors[buzz.team]}
                     text-white p-6 rounded-xl flex items-center justify-between

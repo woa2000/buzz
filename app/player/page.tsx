@@ -9,6 +9,7 @@ export default function PlayerPage() {
   const [session, setSession] = useState<SessionState | null>(null);
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [playerName, setPlayerName] = useState<string>('');
+  const [playerId, setPlayerId] = useState<string>('');
 
   useEffect(() => {
     // Setup SSE
@@ -34,20 +35,25 @@ export default function PlayerPage() {
     setSelectedTeam(team);
     setPlayerName(name);
     
-    await fetch('/api/buzz', {
+    const response = await fetch('/api/buzz', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ team, name, action: 'join' }),
     });
+
+    const result = await response.json();
+    if (result.success && result.player) {
+      setPlayerId(result.player.id);
+    }
   };
 
   const handleBuzz = async () => {
-    if (!selectedTeam || !session?.acceptingAnswers) return;
+    if (!selectedTeam || !playerId || !session?.acceptingAnswers) return;
 
     const response = await fetch('/api/buzz', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ team: selectedTeam, action: 'buzz' }),
+      body: JSON.stringify({ playerId, action: 'buzz' }),
     });
 
     const result = await response.json();
@@ -76,9 +82,9 @@ export default function PlayerPage() {
     oscillator.stop(context.currentTime + 0.3);
   };
 
-  const myBuzz = session?.buzzRanking.find(b => b.team === selectedTeam);
+  const myBuzz = session?.buzzRanking.find(b => b.playerId === playerId);
   const myPosition = myBuzz?.position;
-  const hasNotBuzzed = selectedTeam && session && session.buzzRanking.length > 0 && !myBuzz;
+  const hasNotBuzzed = playerId && session && session.buzzRanking.length > 0 && !myBuzz;
 
   if (!session) {
     return (
@@ -125,10 +131,10 @@ export default function PlayerPage() {
                 <div className="space-y-2">
                   {session.buzzRanking.map((buzz, index) => (
                     <div
-                      key={buzz.team}
+                      key={buzz.playerId}
                       className={`
                         p-4 rounded-lg flex items-center justify-between
-                        ${buzz.team === selectedTeam 
+                        ${buzz.playerId === playerId 
                           ? 'bg-green-100 border-2 border-green-500' 
                           : 'bg-gray-100'}
                       `}
@@ -138,11 +144,11 @@ export default function PlayerPage() {
                           {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '4️⃣'}
                         </span>
                         <div>
-                          <div className={`text-xl font-bold ${buzz.team === selectedTeam ? 'text-green-700' : 'text-gray-800'}`}>
-                            {buzz.team}
+                          <div className={`text-xl font-bold ${buzz.playerId === playerId ? 'text-green-700' : 'text-gray-800'}`}>
+                            {buzz.team} - {buzz.playerName}
                           </div>
                           <div className="text-sm text-gray-600">
-                            {buzz.team === selectedTeam ? 'Você!' : ''}
+                            {buzz.playerId === playerId ? 'Você!' : ''}
                           </div>
                         </div>
                       </div>

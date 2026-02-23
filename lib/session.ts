@@ -60,44 +60,43 @@ export function addPlayer(team: Team, name: string): Player {
     joinedAt: Date.now(),
   };
   
-  // Remove any existing player from the same team
-  session.players = session.players.filter(p => p.team !== team);
+  // Allow multiple players per team
   session.players.push(player);
   
   broadcastUpdate();
   return player;
 }
 
-export function registerBuzz(team: Team): { success: boolean; position: number | null; session: SessionState } {
+export function registerBuzz(playerId: string): { success: boolean; position: number | null; session: SessionState } {
   // Only accept buzz if session is accepting answers
   if (!session.acceptingAnswers) {
     return { success: false, position: null, session: getSession() };
   }
 
-  // Check if this team already buzzed
-  const alreadyBuzzed = session.buzzRanking.some(b => b.team === team);
+  // Check if this player already buzzed
+  const alreadyBuzzed = session.buzzRanking.some(b => b.playerId === playerId);
   if (alreadyBuzzed) {
     return { success: false, position: null, session: getSession() };
   }
 
-  // Get player name
-  const player = session.players.find(p => p.team === team);
-  const playerName = player?.name || 'Anônimo';
+  // Get player info
+  const player = session.players.find(p => p.id === playerId);
+  if (!player) {
+    return { success: false, position: null, session: getSession() };
+  }
 
   const position = session.buzzRanking.length + 1;
   const buzzEvent: BuzzEvent = {
-    team,
-    playerName,
+    playerId: player.id,
+    team: player.team,
+    playerName: player.name,
     timestamp: Date.now(),
     position,
   };
 
   session.buzzRanking.push(buzzEvent);
   
-  // Stop accepting answers after all 4 teams have buzzed
-  if (session.buzzRanking.length >= 4) {
-    session.acceptingAnswers = false;
-  }
+  // Do not auto-stop accepting answers - let the host control this
   
   broadcastUpdate();
   

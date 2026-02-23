@@ -4,13 +4,12 @@ import type { Team } from '@/lib/types';
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
-  const { team, action, name } = body;
-
-  if (!team || !['Alpha', 'Bravo', 'Charlie', 'Delta'].includes(team)) {
-    return NextResponse.json({ error: 'Invalid team' }, { status: 400 });
-  }
+  const { team, action, name, playerId } = body;
 
   if (action === 'join') {
+    if (!team || !['Alpha', 'Bravo', 'Charlie', 'Delta'].includes(team)) {
+      return NextResponse.json({ error: 'Invalid team' }, { status: 400 });
+    }
     if (!name || name.trim() === '') {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 });
     }
@@ -19,7 +18,10 @@ export async function POST(request: NextRequest) {
   }
 
   if (action === 'buzz') {
-    const result = registerBuzz(team as Team);
+    if (!playerId) {
+      return NextResponse.json({ error: 'Player ID is required' }, { status: 400 });
+    }
+    const result = registerBuzz(playerId);
     return NextResponse.json(result);
   }
 
