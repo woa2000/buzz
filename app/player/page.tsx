@@ -74,6 +74,10 @@ export default function PlayerPage() {
     oscillator.stop(context.currentTime + 0.3);
   };
 
+  const myBuzz = session?.buzzRanking.find(b => b.team === selectedTeam);
+  const myPosition = myBuzz?.position;
+  const hasNotBuzzed = selectedTeam && session && session.buzzRanking.length > 0 && !myBuzz;
+
   if (!session) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center">
@@ -82,8 +86,8 @@ export default function PlayerPage() {
     );
   }
 
-  const isWinner = session.currentBuzz?.team === selectedTeam;
-  const canBuzz = session.acceptingAnswers && !session.currentBuzz;
+  const canBuzz = session.acceptingAnswers && !myBuzz;
+  const alreadyBuzzed = !!myBuzz;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-600 to-purple-600 p-8">
@@ -102,20 +106,58 @@ export default function PlayerPage() {
               team={selectedTeam}
               onBuzz={handleBuzz}
               disabled={!canBuzz}
-              winner={isWinner}
+              position={myPosition}
             />
 
-            {!session.acceptingAnswers && !session.currentBuzz && (
+            {!session.acceptingAnswers && session.buzzRanking.length === 0 && (
               <div className="mt-8 text-center text-gray-600">
                 <p className="text-xl">Aguarde o apresentador liberar as respostas...</p>
               </div>
             )}
 
-            {session.currentBuzz && !isWinner && (
-              <div className="mt-8 text-center">
-                <div className="text-2xl font-bold text-red-600">
-                  {session.currentBuzz.team} foi mais rápido!
+            {session.buzzRanking.length > 0 && (
+              <div className="mt-8">
+                <h3 className="text-2xl font-bold text-center text-gray-800 mb-4">
+                  📊 Ranking
+                </h3>
+                <div className="space-y-2">
+                  {session.buzzRanking.map((buzz, index) => (
+                    <div
+                      key={buzz.team}
+                      className={`
+                        p-4 rounded-lg flex items-center justify-between
+                        ${buzz.team === selectedTeam 
+                          ? 'bg-green-100 border-2 border-green-500' 
+                          : 'bg-gray-100'}
+                      `}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <span className="text-3xl">
+                          {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '4️⃣'}
+                        </span>
+                        <div>
+                          <div className={`text-xl font-bold ${buzz.team === selectedTeam ? 'text-green-700' : 'text-gray-800'}`}>
+                            {buzz.team}
+                          </div>
+                          <div className="text-sm text-gray-600">
+                            {buzz.team === selectedTeam ? 'Você!' : ''}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-2xl font-bold text-gray-700">
+                        #{buzz.position}
+                      </div>
+                    </div>
+                  ))}
                 </div>
+              </div>
+            )}
+
+            {hasNotBuzzed && session.acceptingAnswers && (
+              <div className="mt-6 text-center">
+                <p className="text-xl text-red-600 font-bold animate-pulse">
+                  ⚠️ Outros grupos já responderam! Seja rápido!
+                </p>
               </div>
             )}
           </div>

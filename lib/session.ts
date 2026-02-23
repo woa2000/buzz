@@ -5,7 +5,7 @@ let session: SessionState = {
   isActive: false,
   acceptingAnswers: false,
   players: [],
-  currentBuzz: null,
+  buzzRanking: [],
   sessionId: generateSessionId(),
 };
 
@@ -25,7 +25,7 @@ export function createSession(): SessionState {
     isActive: true,
     acceptingAnswers: false,
     players: [],
-    currentBuzz: null,
+    buzzRanking: [],
     sessionId: generateSessionId(),
   };
   broadcastUpdate();
@@ -34,7 +34,7 @@ export function createSession(): SessionState {
 
 export function startAcceptingAnswers(): SessionState {
   session.acceptingAnswers = true;
-  session.currentBuzz = null;
+  session.buzzRanking = [];
   broadcastUpdate();
   return getSession();
 }
@@ -46,7 +46,7 @@ export function stopAcceptingAnswers(): SessionState {
 }
 
 export function resetBuzz(): SessionState {
-  session.currentBuzz = null;
+  session.buzzRanking = [];
   session.acceptingAnswers = false;
   broadcastUpdate();
   return getSession();
@@ -67,23 +67,35 @@ export function addPlayer(team: Team): Player {
   return player;
 }
 
-export function registerBuzz(team: Team): { success: boolean; session: SessionState } {
-  // Only accept buzz if session is active and accepting answers
-  if (!session.acceptingAnswers || session.currentBuzz) {
-    return { success: false, session: getSession() };
+export function registerBuzz(team: Team): { success: boolean; position: number | null; session: SessionState } {
+  // Only accept buzz if session is accepting answers
+  if (!session.acceptingAnswers) {
+    return { success: false, position: null, session: getSession() };
   }
 
+  // Check if this team already buzzed
+  const alreadyBuzzed = session.buzzRanking.some(b => b.team === team);
+  if (alreadyBuzzed) {
+    return { success: false, position: null, session: getSession() };
+  }
+
+  const position = session.buzzRanking.length + 1;
   const buzzEvent: BuzzEvent = {
     team,
     timestamp: Date.now(),
+    position,
   };
 
-  session.currentBuzz = buzzEvent;
-  session.acceptingAnswers = false;
+  session.buzzRanking.push(buzzEvent);
+  
+  // Stop accepting answers after all 4 teams have buzzed
+  if (session.buzzRanking.length >= 4) {
+    session.acceptingAnswers = false;
+  }
   
   broadcastUpdate();
   
-  return { success: true, session: getSession() };
+  return { success: true, position, session: getSession() };
 }
 
 // SSE Client Management

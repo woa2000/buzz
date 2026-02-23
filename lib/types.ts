@@ -9,13 +9,14 @@ export interface Player {
 export interface BuzzEvent {
   team: Team;
   timestamp: number;
+  position: number; // 1st, 2nd, 3rd, 4th
 }
 
 export interface SessionState {
   isActive: boolean;
   acceptingAnswers: boolean;
   players: Player[];
-  currentBuzz: BuzzEvent | null;
+  buzzRanking: BuzzEvent[]; // Array ordered by timestamp
   sessionId: string;
 }
 
