@@ -7,20 +7,9 @@ export async function GET(request: NextRequest) {
   const stream = new ReadableStream({
     start(controller) {
       const encoder = new TextEncoder();
-      const writer = {
-        write: async (data: Uint8Array) => {
-          controller.enqueue(data);
-        },
-        close: () => {
-          controller.close();
-        },
-        abort: (reason: any) => {
-          controller.error(reason);
-        },
-      } as WritableStreamDefaultWriter;
 
-      // Add client to SSE clients
-      addSSEClient(writer);
+      // Add client to SSE clients - pass controller directly
+      addSSEClient(controller);
 
       // Send initial state
       const initialMessage = JSON.stringify({
@@ -35,14 +24,19 @@ export async function GET(request: NextRequest) {
           controller.enqueue(encoder.encode(': heartbeat\n\n'));
         } catch {
           clearInterval(heartbeat);
+          removeSSEClient(controller);
         }
       }, 30000);
 
       // Cleanup on disconnect
       request.signal.addEventListener('abort', () => {
         clearInterval(heartbeat);
-        removeSSEClient(writer);
-        controller.close();
+        removeSSEClient(controller);
+        try {
+          controller.close();
+        } catch {
+          // Already closed
+        }
       });
     },
   });

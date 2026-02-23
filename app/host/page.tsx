@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import QRCodeDisplay from '@/components/QRCodeDisplay';
 import type { SessionState, Team } from '@/lib/types';
@@ -15,6 +15,7 @@ const teamColors: Record<Team, string> = {
 export default function HostPage() {
   const [session, setSession] = useState<SessionState | null>(null);
   const [loading, setLoading] = useState(true);
+  const previousBuzzCountRef = useRef(0);
   const router = useRouter();
   const playerUrl = typeof window !== 'undefined' 
     ? `${window.location.origin}/player` 
@@ -39,23 +40,39 @@ export default function HostPage() {
     eventSource.onmessage = (event) => {
       const message = JSON.parse(event.data);
       if (message.type === 'session-update') {
-        setSession(message.data);
+        const newSession = message.data;
+        
+        console.log('[Host] Session updated:', {
+          acceptingAnswers: newSession.acceptingAnswers,
+          buzzCount: newSession.buzzRanking.length,
+          playersCount: newSession.players.length
+        });
         
         // Play sound when someone buzzes
-        if (message.data.buzzRanking && message.data.buzzRanking.length > 0) {
-          const previousLength = session?.buzzRanking?.length || 0;
-          if (message.data.buzzRanking.length > previousLength) {
+        if (newSession.buzzRanking && newSession.buzzRanking.length > 0) {
+          if (newSession.buzzRanking.length > previousBuzzCountRef.current) {
             playBuzzSound();
           }
+          previousBuzzCountRef.current = newSession.buzzRanking.length;
+        } else {
+          previousBuzzCountRef.current = 0;
         }
+        
+        setSession(newSession);
       }
     };
 
-    eventSource.onerror = () => {
+    eventSource.onerror = (error) => {
+      console.error('[Host] SSE error:', error);
       eventSource.close();
     };
 
+    eventSource.onopen = () => {
+      console.log('[Host] SSE connected');
+    };
+
     return () => {
+      console.log('[Host] SSE disconnecting');
       eventSource.close();
     };
   }, []);

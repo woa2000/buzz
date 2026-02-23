@@ -19,14 +19,25 @@ export default function PlayerPage() {
       const message = JSON.parse(event.data);
       if (message.type === 'session-update') {
         setSession(message.data);
+        console.log('[Player] Session updated:', {
+          acceptingAnswers: message.data.acceptingAnswers,
+          buzzCount: message.data.buzzRanking.length,
+          playersCount: message.data.players.length
+        });
       }
     };
 
-    eventSource.onerror = () => {
+    eventSource.onerror = (error) => {
+      console.error('[Player] SSE error:', error);
       eventSource.close();
     };
 
+    eventSource.onopen = () => {
+      console.log('[Player] SSE connected');
+    };
+
     return () => {
+      console.log('[Player] SSE disconnecting');
       eventSource.close();
     };
   }, []);

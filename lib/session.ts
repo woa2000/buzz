@@ -9,8 +9,8 @@ let session: SessionState = {
   sessionId: generateSessionId(),
 };
 
-// SSE clients
-const clients: Set<WritableStreamDefaultWriter> = new Set();
+// SSE clients - store controllers directly
+const clients: Set<ReadableStreamDefaultController> = new Set();
 
 function generateSessionId(): string {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -104,12 +104,14 @@ export function registerBuzz(playerId: string): { success: boolean; position: nu
 }
 
 // SSE Client Management
-export function addSSEClient(writer: WritableStreamDefaultWriter) {
-  clients.add(writer);
+export function addSSEClient(controller: ReadableStreamDefaultController) {
+  clients.add(controller);
+  console.log(`[SSE] Client connected. Total clients: ${clients.size}`);
 }
 
-export function removeSSEClient(writer: WritableStreamDefaultWriter) {
-  clients.delete(writer);
+export function removeSSEClient(controller: ReadableStreamDefaultController) {
+  clients.delete(controller);
+  console.log(`[SSE] Client disconnected. Total clients: ${clients.size}`);
 }
 
 function broadcastUpdate() {
@@ -121,13 +123,29 @@ function broadcastUpdate() {
   const encoder = new TextEncoder();
   const data = encoder.encode(`data: ${message}\n\n`);
 
+  console.log(`[SSE] Broadcasting to ${clients.size} clients:`, {
+    acceptingAnswers: session.acceptingAnswers,
+    buzzCount: session.buzzRanking.length,
+    playersCount: session.players.length
+  });
+
   // Send to all connected clients
-  clients.forEach(async (writer) => {
+  const disconnectedClients: ReadableStreamDefaultController[] = [];
+  
+  clients.forEach((controller) => {
     try {
-      await writer.write(data);
+      controller.enqueue(data);
     } catch (error) {
-      // Remove disconnected clients
-      clients.delete(writer);
+      console.error('[SSE] Error sending to client:', error);
+      // Mark for removal if disconnected
+      disconnectedClients.push(controller);
     }
   });
+  
+  // Clean up disconnected clients
+  disconnectedClients.forEach(client => clients.delete(client));
+  
+  if (disconnectedClients.length > 0) {
+    console.log(`[SSE] Removed ${disconnectedClients.length} disconnected clients`);
+  }
 }
