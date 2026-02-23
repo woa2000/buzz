@@ -1,0 +1,126 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import TeamSelector from '@/components/TeamSelector';
+import BuzzButton from '@/components/BuzzButton';
+import type { SessionState, Team } from '@/lib/types';
+
+export default function PlayerPage() {
+  const [session, setSession] = useState<SessionState | null>(null);
+  const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
+
+  useEffect(() => {
+    // Setup SSE
+    const eventSource = new EventSource('/api/events');
+
+    eventSource.onmessage = (event) => {
+      const message = JSON.parse(event.data);
+      if (message.type === 'session-update') {
+        setSession(message.data);
+      }
+    };
+
+    eventSource.onerror = () => {
+      eventSource.close();
+    };
+
+    return () => {
+      eventSource.close();
+    };
+  }, []);
+
+  const handleSelectTeam = async (team: Team) => {
+    setSelectedTeam(team);
+    
+    await fetch('/api/buzz', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ team, action: 'join' }),
+    });
+  };
+
+  const handleBuzz = async () => {
+    if (!selectedTeam || !session?.acceptingAnswers) return;
+
+    const response = await fetch('/api/buzz', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ team: selectedTeam, action: 'buzz' }),
+    });
+
+    const result = await response.json();
+    
+    if (result.success) {
+      // Play success sound
+      playSuccessSound();
+    }
+  };
+
+  const playSuccessSound = () => {
+    const context = new AudioContext();
+    const oscillator = context.createOscillator();
+    const gainNode = context.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(context.destination);
+    
+    oscillator.frequency.value = 1000;
+    oscillator.type = 'sine';
+    
+    gainNode.gain.setValueAtTime(0.3, context.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, context.currentTime + 0.3);
+    
+    oscillator.start(context.currentTime);
+    oscillator.stop(context.currentTime + 0.3);
+  };
+
+  if (!session) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center">
+        <div className="text-white text-2xl">Conectando...</div>
+      </div>
+    );
+  }
+
+  const isWinner = session.currentBuzz?.team === selectedTeam;
+  const canBuzz = session.acceptingAnswers && !session.currentBuzz;
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-indigo-600 to-purple-600 p-8">
+      <div className="max-w-2xl mx-auto">
+        <h1 className="text-4xl font-bold text-white text-center mb-8">
+          🎮 Campainha Digital
+        </h1>
+
+        {!selectedTeam ? (
+          <div className="bg-white rounded-xl shadow-lg p-8">
+            <TeamSelector onSelectTeam={handleSelectTeam} selectedTeam={selectedTeam ?? undefined} />
+          </div>
+        ) : (
+          <div className="bg-white rounded-xl shadow-lg p-8">
+            <BuzzButton
+              team={selectedTeam}
+              onBuzz={handleBuzz}
+              disabled={!canBuzz}
+              winner={isWinner}
+            />
+
+            {!session.acceptingAnswers && !session.currentBuzz && (
+              <div className="mt-8 text-center text-gray-600">
+                <p className="text-xl">Aguarde o apresentador liberar as respostas...</p>
+              </div>
+            )}
+
+            {session.currentBuzz && !isWinner && (
+              <div className="mt-8 text-center">
+                <div className="text-2xl font-bold text-red-600">
+                  {session.currentBuzz.team} foi mais rápido!
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
