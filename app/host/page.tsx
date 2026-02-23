@@ -123,7 +123,8 @@ export default function HostPage() {
             <h3 className="text-2xl font-bold mb-4 text-gray-800">Grupos Conectados</h3>
             <div className="space-y-2">
               {(['Alpha', 'Bravo', 'Charlie', 'Delta'] as Team[]).map((team) => {
-                const isConnected = session.players.some(p => p.team === team);
+                const player = session.players.find(p => p.team === team);
+                const isConnected = !!player;
                 return (
                   <div
                     key={team}
@@ -132,7 +133,12 @@ export default function HostPage() {
                       ${isConnected ? teamColors[team] + ' text-white' : 'bg-gray-200 text-gray-500'}
                     `}
                   >
-                    <span className="font-bold">{team}</span>
+                    <div>
+                      <div className="font-bold">{team}</div>
+                      {player && (
+                        <div className="text-sm opacity-90">{player.name}</div>
+                      )}
+                    </div>
                     <span>{isConnected ? '✓ Conectado' : '○ Aguardando'}</span>
                   </div>
                 );
@@ -189,6 +195,7 @@ export default function HostPage() {
                     <span className="text-5xl">{positionEmojis[index]}</span>
                     <div>
                       <div className="text-3xl font-bold">{buzz.team}</div>
+                      <div className="text-lg opacity-95">{buzz.playerName}</div>
                       <div className="text-sm opacity-90">{positionLabels[index]}</div>
                     </div>
                   </div>

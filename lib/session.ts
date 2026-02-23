@@ -52,10 +52,11 @@ export function resetBuzz(): SessionState {
   return getSession();
 }
 
-export function addPlayer(team: Team): Player {
+export function addPlayer(team: Team, name: string): Player {
   const player: Player = {
     id: Math.random().toString(36).substring(7),
     team,
+    name,
     joinedAt: Date.now(),
   };
   
@@ -79,9 +80,14 @@ export function registerBuzz(team: Team): { success: boolean; position: number |
     return { success: false, position: null, session: getSession() };
   }
 
+  // Get player name
+  const player = session.players.find(p => p.team === team);
+  const playerName = player?.name || 'Anônimo';
+
   const position = session.buzzRanking.length + 1;
   const buzzEvent: BuzzEvent = {
     team,
+    playerName,
     timestamp: Date.now(),
     position,
   };

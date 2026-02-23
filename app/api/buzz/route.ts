@@ -4,14 +4,17 @@ import type { Team } from '@/lib/types';
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
-  const { team, action } = body;
+  const { team, action, name } = body;
 
   if (!team || !['Alpha', 'Bravo', 'Charlie', 'Delta'].includes(team)) {
     return NextResponse.json({ error: 'Invalid team' }, { status: 400 });
   }
 
   if (action === 'join') {
-    const player = addPlayer(team as Team);
+    if (!name || name.trim() === '') {
+      return NextResponse.json({ error: 'Name is required' }, { status: 400 });
+    }
+    const player = addPlayer(team as Team, name.trim());
     return NextResponse.json({ success: true, player });
   }
 

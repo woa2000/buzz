@@ -8,6 +8,7 @@ import type { SessionState, Team } from '@/lib/types';
 export default function PlayerPage() {
   const [session, setSession] = useState<SessionState | null>(null);
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
+  const [playerName, setPlayerName] = useState<string>('');
 
   useEffect(() => {
     // Setup SSE
@@ -29,13 +30,14 @@ export default function PlayerPage() {
     };
   }, []);
 
-  const handleSelectTeam = async (team: Team) => {
+  const handleSelectTeam = async (team: Team, name: string) => {
     setSelectedTeam(team);
+    setPlayerName(name);
     
     await fetch('/api/buzz', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ team, action: 'join' }),
+      body: JSON.stringify({ team, name, action: 'join' }),
     });
   };
 

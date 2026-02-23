@@ -3,11 +3,13 @@ export type Team = 'Alpha' | 'Bravo' | 'Charlie' | 'Delta';
 export interface Player {
   id: string;
   team: Team;
+  name: string;
   joinedAt: number;
 }
 
 export interface BuzzEvent {
   team: Team;
+  playerName: string;
   timestamp: number;
   position: number; // 1st, 2nd, 3rd, 4th
 }
