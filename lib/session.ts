@@ -67,22 +67,28 @@ export function addPlayer(team: Team, name: string): Player {
   return player;
 }
 
-export function registerBuzz(playerId: string): { success: boolean; position: number | null; session: SessionState } {
+export function registerBuzz(playerId: string): { success: boolean; position: number | null; session: SessionState; message?: string } {
   // Only accept buzz if session is accepting answers
   if (!session.acceptingAnswers) {
-    return { success: false, position: null, session: getSession() };
-  }
-
-  // Check if this player already buzzed
-  const alreadyBuzzed = session.buzzRanking.some(b => b.playerId === playerId);
-  if (alreadyBuzzed) {
-    return { success: false, position: null, session: getSession() };
+    return { success: false, position: null, session: getSession(), message: 'Aguarde o apresentador liberar as respostas' };
   }
 
   // Get player info
   const player = session.players.find(p => p.id === playerId);
   if (!player) {
-    return { success: false, position: null, session: getSession() };
+    return { success: false, position: null, session: getSession(), message: 'Jogador não encontrado' };
+  }
+
+  // Check if someone from this team already buzzed (only first per team)
+  const teamAlreadyBuzzed = session.buzzRanking.some(b => b.team === player.team);
+  if (teamAlreadyBuzzed) {
+    return { success: false, position: null, session: getSession(), message: 'Sua equipe já respondeu' };
+  }
+
+  // Check if this player already buzzed
+  const alreadyBuzzed = session.buzzRanking.some(b => b.playerId === playerId);
+  if (alreadyBuzzed) {
+    return { success: false, position: null, session: getSession(), message: 'Você já respondeu' };
   }
 
   const position = session.buzzRanking.length + 1;
@@ -96,7 +102,10 @@ export function registerBuzz(playerId: string): { success: boolean; position: nu
 
   session.buzzRanking.push(buzzEvent);
   
-  // Do not auto-stop accepting answers - let the host control this
+  // Stop accepting answers after all 4 teams have buzzed
+  if (session.buzzRanking.length >= 4) {
+    session.acceptingAnswers = false;
+  }
   
   broadcastUpdate();
   

@@ -10,6 +10,7 @@ export default function PlayerPage() {
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [playerName, setPlayerName] = useState<string>('');
   const [playerId, setPlayerId] = useState<string>('');
+  const [errorMessage, setErrorMessage] = useState<string>('');
 
   useEffect(() => {
     // Setup SSE
@@ -61,6 +62,8 @@ export default function PlayerPage() {
   const handleBuzz = async () => {
     if (!selectedTeam || !playerId || !session?.acceptingAnswers) return;
 
+    setErrorMessage('');
+
     const response = await fetch('/api/buzz', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -72,6 +75,10 @@ export default function PlayerPage() {
     if (result.success) {
       // Play success sound
       playSuccessSound();
+    } else if (result.message) {
+      setErrorMessage(result.message);
+      // Show error for 3 seconds
+      setTimeout(() => setErrorMessage(''), 3000);
     }
   };
 
@@ -95,6 +102,7 @@ export default function PlayerPage() {
 
   const myBuzz = session?.buzzRanking.find(b => b.playerId === playerId);
   const myPosition = myBuzz?.position;
+  const teamBuzz = session?.buzzRanking.find(b => b.team === selectedTeam);
   const hasNotBuzzed = playerId && session && session.buzzRanking.length > 0 && !myBuzz;
 
   if (!session) {
@@ -105,8 +113,9 @@ export default function PlayerPage() {
     );
   }
 
-  const canBuzz = session.acceptingAnswers && !myBuzz;
+  const canBuzz = session.acceptingAnswers && !myBuzz && !teamBuzz;
   const alreadyBuzzed = !!myBuzz;
+  const teamAlreadyAnswered = !!teamBuzz && !myBuzz;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-600 to-purple-600 p-8">
@@ -127,6 +136,22 @@ export default function PlayerPage() {
               disabled={!canBuzz}
               position={myPosition}
             />
+
+            {errorMessage && (
+              <div className="mt-6 p-4 bg-red-100 border-2 border-red-500 rounded-lg">
+                <p className="text-red-700 text-center font-bold text-lg">
+                  ⚠️ {errorMessage}
+                </p>
+              </div>
+            )}
+
+            {teamAlreadyAnswered && (
+              <div className="mt-6 p-4 bg-blue-100 border-2 border-blue-500 rounded-lg">
+                <p className="text-blue-700 text-center font-bold text-lg">
+                  ℹ️ {teamBuzz?.playerName} da sua equipe já respondeu!
+                </p>
+              </div>
+            )}
 
             {!session.acceptingAnswers && session.buzzRanking.length === 0 && (
               <div className="mt-8 text-center text-gray-600">
